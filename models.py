@@ -2,10 +2,10 @@ global Models
 
 Models = {
     "SVC": {
-        "Role": "Classifier"
+        "Role": "Classification"
     },
     "SVR": {
-        "Role": "Regressor"
+        "Role": "Regression"
     }
 }
 

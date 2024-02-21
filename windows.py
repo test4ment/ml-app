@@ -10,13 +10,16 @@ class AboutWindow(tk.Toplevel):
         # write something bout yourself
 
 class PathWindow(tk.Toplevel):
-    def __init__(self):
+    def __init__(self, parent):
         super().__init__()
+        
+        self.parent = parent
         
         def confirm():
             try:
                 path = self.textEntry.get()
                 read_csv(path)
+                self.parent.path = path
                 self.destroy()
             except Exception as e:
                 self.textEntry.delete(0, tk.END)
@@ -44,13 +47,16 @@ class DemoWindow(tk.Toplevel):
         super().__init__()
         
         def load_data():
-            PathWindow()
+            PathWindow(self)
             
                 
         self.loadedText = "Load data"
         self.loadData = ttk.Button(self, text = self.loadedText, command = load_data)
         
-        self.loadData.pack(anchor = "nw")
+        self.pribt = ttk.Button(self, text = "print", command = lambda: print(self.path))
+        self.pribt.pack()
+        
+        self.loadData.pack(anchor = "nw", padx = 12, pady = 12)
         
         # from sklearn.linear_model import SGDClassifier
         

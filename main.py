@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 from models import *
-from windows import FitPredict, AboutWindow, DemoWindow
+from windows import FitPredict, AboutWindow, DemoWindow, exceptionCatcher
+from random import sample
 
 class MainWindow(tk.Tk):
   def __init__(self):
@@ -11,19 +12,20 @@ class MainWindow(tk.Tk):
       
     def modelWindowOpener():
       currModel = self.modelSelect.get()
-      FitPredict(currModel)
+      exceptionCatcher(lambda: FitPredict(currModel))
     
     def about():
-      AboutWindow()
-      
+      tmp = [i for i in self.aboutButton["text"]]
+      a, b = map(tmp.index, sample(tmp, 2))
+      tmp[a], tmp[b] = tmp[b], tmp[a]
+      self.aboutButton["text"] = "".join(tmp)
+
     def demo():
       DemoWindow()
     
     super().__init__()
     
     self.title("ML app")
-    self.geometry("400x400")
-
 
     self.mlTaskFrame = ttk.Frame(borderwidth = 0)
     
@@ -56,7 +58,10 @@ class MainWindow(tk.Tk):
 
     self.protocol("WM_DELETE_WINDOW", self.destroy)
 
-  
+    self.update()
+    self.minsize(self.winfo_width() + 10, self.winfo_height())
+    self.geometry("275x300")
+
 
 if __name__ == '__main__':
     root = MainWindow()

@@ -283,7 +283,7 @@ class FitPredict(tk.Toplevel):
         self.loadStatusText.set(f"Loaded {self.csvdf.name}")
 
         self.inputFrames = {}
-        for column in self.data_X.columns:
+        for column, type_ in zip(self.data_X.columns, self.data_X.dtypes):
             frame = ttk.Frame(self.globalFrame2)
             lb = ttk.Label(frame, text = f"{column} ({self.data_X[column].min()} - {self.data_X[column].max()})", width = 25)
             lb.pack(side = "left")
@@ -300,6 +300,9 @@ class FitPredict(tk.Toplevel):
 
         self.update()
         # self.
+    
+    def inpLabelObject(self, df, column) -> tuple[tk.Frame, tk.Label, tk.Entry or tk.Spinbox]: # type: ignore
+        ...
 
 
 class FitPredictSVC(FitPredict):
@@ -312,7 +315,7 @@ class FitPredictSVC(FitPredict):
 
 
 
-def dataSplit(df: pd.DataFrame, columnName: str) -> (pd.DataFrame, pd.DataFrame):
+def dataSplit(df: pd.DataFrame, columnName: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     data_X = df.drop(columnName, axis = 1)
     data_y = df[[columnName]]
     return data_X, data_y

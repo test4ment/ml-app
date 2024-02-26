@@ -49,7 +49,7 @@ class CsvPathWindow(tk.Toplevel):
         
         self.parent = parent
         
-        def confirm():
+        def confirm(* args):
             path = self.textEntry.get()
             self.parent.csvdf = read_csv(path)
             self.parent.csvdf.name = path.split("\\")[-1]
@@ -58,7 +58,9 @@ class CsvPathWindow(tk.Toplevel):
 
         self.title("Select .csv file...")
         self.geometry("300x50")
-
+        
+        self.bind("<Return>", confirm)
+                
         self.frame = ttk.Frame(self)
         
         self.textEntry = ttk.Entry(self.frame)
@@ -148,6 +150,10 @@ class DemoWindow(tk.Toplevel):
         self.minsize(346, 212)
 
     def postLoad(self):
+        for column, type_ in zip(self.data_X.columns, self.data_X.dtypes):
+            {"object": lambda col: self.data_X.drop(col, axis = 1, inplace = True)}.get\
+                (str(type_), lambda col: None)(column)
+            
         self.data_X = {
             1: lambda: 1/0,
             2: lambda: self.data_X
@@ -230,12 +236,13 @@ class FitPredict(tk.Toplevel):
 
         try:
             self.model = Models[model]
-        except KeyError as ve:
+        except KeyError:
             self.destroy()
             raise KeyError("Model not specified")
 
         self.title("ML app")
-        self.geometry("400x400")
+        self.geometry("855x400")
+        self.minsize(855, 400)
 
         # Controls the data, model and basic oommands
         self.globalFrame1 = ttk.Frame(self)
@@ -258,15 +265,30 @@ class FitPredict(tk.Toplevel):
 
         self.fitpredictFrame.pack(anchor = "nw", padx = 12, pady = 2)
 
-        self.globalFrame1.pack(side = "left", expand = "Y", fill = "both")
+        self.globalFrame1.pack(side = "left", expand = False, fill = "y", anchor = "w")
 
         # Data input / predict out
         self.globalFrame2 = ttk.Frame(self)
 
-        self.globalFrame2.pack(side = "left", expand = "Y", fill = "both", pady = (12, 0))
+        self.globalFrame2.pack(side = "left", 
+                               expand = False, 
+                               fill = "both",
+                               pady = (12, 0),
+                               padx = 0)
 
+        
+        # Matplotlib graphs
+        self.globalFrame3 = ttk.Frame(self)
+        
+        self.fig = Figure(figsize = (5, 4), dpi = 100)
+        self.fig.subplots_adjust(left = 0.01, right = 0.99, top = 0.99, bottom = 0.02)
+        # self.ax = self.fig.add_subplot()
+        self.canvas = FigureCanvasTkAgg(self.fig, master = self.globalFrame3)
+        self.canvas.get_tk_widget().pack(side = "left", 
+                                         fill = "both", 
+                                         expand = True, padx = 0, pady = 0)
 
-        # self.globalFrame3 = ttk.Frame(self)
+        self.globalFrame3.pack(side = "left", expand = True, fill = "both", pady = 12, padx = 12)
         # self.globalFrame4 = ttk.Frame(self)
         # self.statusText = ttk.Label(text = "status")
 
@@ -303,7 +325,7 @@ class FitPredict(tk.Toplevel):
             # ent.insert(0, f"{self.data_X[column].mean():.2f}")
 
             self.inputFrames[frame] = self.inpLabelObject(frame, self.data_X[column], column)
-            frame.pack()
+            frame.pack(anchor = "w")
 
             ## Only works with float data
             ## Make encoding method
@@ -314,10 +336,9 @@ class FitPredict(tk.Toplevel):
     
     def inpLabelObject(self, frame, series, colName, width = 25) -> tuple[tk.Label, tk.Entry or tk.Spinbox]: # type: ignore
         type_ = str(series.dtype)
-        print(type_)
         labeltext = {
-            "object": ""
-        }.get(type_, f" ({series.min():.2f} - {series.max():.2f})")
+            "object": lambda: "",
+        }.get(type_, lambda: f" ({series.min():.2f} - {series.max():.2f})")()
         label = ttk.Label(frame, text = f"{colName}" + labeltext, width = width)
         label.pack(side = "left")
 

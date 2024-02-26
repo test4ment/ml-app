@@ -282,27 +282,57 @@ class FitPredict(tk.Toplevel):
         self.fitButton["state"], self.predictButton["state"] = "normal", "normal"
         self.loadStatusText.set(f"Loaded {self.csvdf.name}")
 
+        try:
+            # map(lambda i: map(lambda j: j.destroy(), i), self.inputFrames.items())
+            for i in self.inputFrames:
+                for j in self.inputFrames[i]:
+                    j.destroy()
+                i.destroy()
+
+            self.update()
+        except (NameError, AttributeError) as e:
+            pass
+
         self.inputFrames = {}
         for column, type_ in zip(self.data_X.columns, self.data_X.dtypes):
             frame = ttk.Frame(self.globalFrame2)
-            lb = ttk.Label(frame, text = f"{column} ({self.data_X[column].min()} - {self.data_X[column].max()})", width = 25)
-            lb.pack(side = "left")
-            ent = ttk.Entry(frame, width = 8)
-            ent.pack(side = "left")
-            ent.insert(0, f"{self.data_X[column].mean():.2f}")
+            # lb = ttk.Label(frame, text = f"{column} ({self.data_X[column].min()} - {self.data_X[column].max()})", width = 25)
+            # lb.pack(side = "left")
+            # ent = ttk.Entry(frame, width = 8)
+            # ent.pack(side = "left")
+            # ent.insert(0, f"{self.data_X[column].mean():.2f}")
 
+            self.inputFrames[frame] = self.inpLabelObject(frame, self.data_X[column], column)
             frame.pack()
 
             ## Only works with float data
             ## Make encoding method
 
-            self.inputFrames[frame] = (lb, ent)
 
         self.update()
         # self.
     
-    def inpLabelObject(self, df, column) -> tuple[tk.Frame, tk.Label, tk.Entry or tk.Spinbox]: # type: ignore
-        ...
+    def inpLabelObject(self, frame, series, colName, width = 25) -> tuple[tk.Label, tk.Entry or tk.Spinbox]: # type: ignore
+        type_ = str(series.dtype)
+        print(type_)
+        labeltext = {
+            "object": ""
+        }.get(type_, f" ({series.min():.2f} - {series.max():.2f})")
+        label = ttk.Label(frame, text = f"{colName}" + labeltext, width = width)
+        label.pack(side = "left")
+
+        entrytype = {
+            "object": lambda: ttk.Combobox(frame, values = list(np.unique(series)), state = "readonly", width = width // 3)
+        }.get(type_, lambda: ttk.Entry(frame, width =  width // 3))()
+
+        try:
+            entrytype.insert(0, f"{series.mean():.2f}")
+        except:
+            pass
+
+        entrytype.pack(side = "left")
+
+        return label, entrytype
 
 
 class FitPredictSVC(FitPredict):

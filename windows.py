@@ -152,10 +152,13 @@ class DemoWindow(tk.Toplevel):
         self.minsize(346, 212)
 
     def postLoad(self):
-        for column, type_ in zip(self.data_X.columns, self.data_X.dtypes):
-            {"object": lambda col: self.data_X.drop(col, axis = 1, inplace = True)}.get\
-                (str(type_), lambda col: None)(column)
-            
+        try:
+            for column, type_ in zip(self.data_X.columns, self.data_X.dtypes):
+                {"object": lambda col: self.data_X.drop(col, axis = 1, inplace = True)}.get\
+                    (str(type_), lambda col: None)(column)
+        except:
+            pass
+
         self.data_X = {
             1: lambda: 1/0,
             2: lambda: self.data_X
@@ -266,15 +269,15 @@ class FitPredict(tk.Toplevel):
         self.predictButton.pack(side = "left")
 
         self.fitpredictFrame.pack(anchor = "nw", padx = 12, pady = 2)
-        
+
         self.dataSplitFrame = ttk.Frame(self.globalFrame1, borderwidth = 2)
-        
+
         self.trainSizeFrame = ttk.Frame(self.dataSplitFrame)
         self.trainSizeLabel = ttk.Label(self.trainSizeFrame, text = "Train size:")
         self.trainSizeLabel.pack(side = "left")
         self.trainSizeVar = tk.StringVar(self, "0.2")
         self.testSizeVar = tk.StringVar(self, "Test size: 0.8")
-        self.trainSizeSpinbox = ttk.Spinbox(self.trainSizeFrame, from_ = 0.01, to = 0.99, 
+        self.trainSizeSpinbox = ttk.Spinbox(self.trainSizeFrame, from_ = 0.01, to = 0.99,
                                             increment = 0.01, textvariable = self.trainSizeVar,
                                             command = lambda: self.testSizeVar.set(f"Test size: {1 - float(self.trainSizeSpinbox.get()):.2f}"),
                                             width = 4)
@@ -284,30 +287,41 @@ class FitPredict(tk.Toplevel):
         self.testSizeLabel.pack(anchor = "nw", padx = 0, fill = "x", expand = True, pady = 2)
         # train_test_split
         self.dataSplitFrame.pack(anchor = "nw", padx = 14)
-        
-        
-        
+
+        self.optionsObj = []
+
+        self.optionsFrame = ttk.Frame(self.globalFrame1)
+
+        for name, kwargs in KWargs[self.model["kwargs"]].items():
+            self.optionsObj += [dict(zip(["entry", "value"], self.decideInpBox(self.optionsFrame, kwargs, 6)), label = ttk.Label(self.optionsFrame, text = name, width = 10, cursor = "question_arrow"))]
+
+        for num, obj in enumerate(self.optionsObj):
+            obj["label"].grid(row = num // 2, column = (2 * num) % 4)
+            self.optionsObj[num]["hovertip"] = Hovertip(obj["label"], KWHints.get(obj["label"]["text"], ""), hover_delay = 1000)
+            obj["entry"].grid(row = num // 2, column = (2 * num + 1) % 4)
+
+        self.optionsFrame.pack(anchor = "nw", padx = 7)
+
         self.globalFrame1.pack(side = "left", expand = False, fill = "y", anchor = "w")
 
         # Data input / predict out
         self.globalFrame2 = ttk.Frame(self)
 
-        self.globalFrame2.pack(side = "left", 
-                               expand = False, 
+        self.globalFrame2.pack(side = "left",
+                               expand = False,
                                fill = "both",
                                pady = (12, 0),
                                padx = 0)
 
-        
         # Matplotlib graphs
         self.globalFrame3 = ttk.Frame(self)
-        
+
         self.fig = Figure(figsize = (5, 4), dpi = 100)
         self.fig.subplots_adjust(left = 0.01, right = 0.99, top = 0.99, bottom = 0.02)
         # self.ax = self.fig.add_subplot()
         self.canvas = FigureCanvasTkAgg(self.fig, master = self.globalFrame3)
-        self.canvas.get_tk_widget().pack(side = "left", 
-                                         fill = "both", 
+        self.canvas.get_tk_widget().pack(side = "left",
+                                         fill = "both",
                                          expand = True, padx = 0, pady = 0)
 
         self.globalFrame3.pack(side = "left", expand = True, fill = "both", pady = 12, padx = 12)
@@ -371,12 +385,54 @@ class FitPredict(tk.Toplevel):
         try:
             entrytype.insert(0, f"{series.mean():.2f}")
         except:
-            pass
+            entrytype.current(0)
 
         entrytype.pack(side = "left")
 
         return label, entrytype
 
+    def decideInpBox(self, master, kw: dict, width = 8) -> tk.Widget:
+        def _raise():
+            raise KeyError()
+
+        kwargs = kw.get("kwargs", {"state": "readonly"})
+
+        defVal = {
+            "int": lambda: tk.IntVar(master, kw.get("default", 0)),
+            "float": lambda: tk.DoubleVar(master, kw.get("default", 0.0))
+        }.get(kw.get("type"), lambda: None)()
+
+
+        widget = {
+            "int": lambda: ttk.Spinbox(master,
+                                       from_ = kw.get("range", -np.inf)[0],
+                                       to = kw.get("range", np.inf)[1],
+                                       increment = kw.get("range", 1)[2],
+                                       textvariable = defVal,
+                                       width = width
+                                       ),
+            "float": lambda: ttk.Spinbox(master,
+                                         from_ = kw.get("range", -np.inf)[0],
+                                         to = kw.get("range", np.inf)[1],
+                                         increment = kw.get("range", 1)[2],
+                                         textvariable = defVal,
+                                         width = width
+                                       ),
+            "list": lambda: ttk.Combobox(master,
+                                         values = kw["items"],
+                                         width = width
+                                         )
+        }.get(kw["type"], lambda: _raise())()
+
+        widget.configure(kwargs)
+
+        {
+            "list": lambda: widget.current(0)
+        }.get(kw["type"], lambda: None)()
+
+        return widget, defVal
+        # int, float (range)
+        # selection, bool
 
 class FitPredictSVC(FitPredict):
     def __init__(self):

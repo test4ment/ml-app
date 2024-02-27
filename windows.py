@@ -13,6 +13,7 @@ import matplotlib.cm
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from idlelib.tooltip import Hovertip
+from sklearn.metrics import r2_score, accuracy_score, classification_report
 
 
 class AboutWindow(tk.Toplevel):
@@ -246,8 +247,8 @@ class FitPredict(tk.Toplevel):
             raise KeyError("Model not specified")
 
         self.title("ML app")
-        self.geometry("855x400")
-        self.minsize(855, 400)
+        self.geometry("1200x400")
+        self.minsize(1200, 400)
 
         # Controls the data, model and basic oommands
         self.globalFrame1 = ttk.Frame(self)
@@ -263,8 +264,8 @@ class FitPredict(tk.Toplevel):
 
         self.fitpredictFrame = ttk.Frame(self.globalFrame1, borderwidth = 2)
 
-        self.fitButton = ttk.Button(self.fitpredictFrame, text = "Train", state = "disabled")
-        self.predictButton = ttk.Button(self.fitpredictFrame, text = "Predict", state = "disabled")
+        self.fitButton = ttk.Button(self.fitpredictFrame, text = "Train", state = "disabled", command = self.trainEvent)
+        self.predictButton = ttk.Button(self.fitpredictFrame, text = "Predict", state = "disabled", command = self.predictEvent)
         self.fitButton.pack(side = "left")
         self.predictButton.pack(side = "left")
 
@@ -293,24 +294,29 @@ class FitPredict(tk.Toplevel):
         self.optionsFrame = ttk.Frame(self.globalFrame1)
 
         for name, kwargs in KWargs[self.model["kwargs"]].items():
-            self.optionsObj += [dict(zip(["entry", "value"], self.decideInpBox(self.optionsFrame, kwargs, 6)), label = ttk.Label(self.optionsFrame, text = name, width = 10, cursor = "question_arrow"))]
+            self.optionsObj += [
+                dict(zip(["entry", "value"], self.decideInpBox(self.optionsFrame, kwargs, 6)), 
+                     label = ttk.Label(self.optionsFrame, text = name, width = 10, cursor = "question_arrow"),
+                     parseCallable = kwargs["parseCallable"]
+                     )
+                ]
 
         for num, obj in enumerate(self.optionsObj):
-            obj["label"].grid(row = num // 2, column = (2 * num) % 4)
+            obj["label"].grid(row = num // 2, column = (2 * num) % 4, pady = 3)
             self.optionsObj[num]["hovertip"] = Hovertip(obj["label"], KWHints.get(obj["label"]["text"], ""), hover_delay = 1000)
-            obj["entry"].grid(row = num // 2, column = (2 * num + 1) % 4)
+            obj["entry"].grid(row = num // 2, column = (2 * num + 1) % 4, padx = (0, (num + 1) % 2 * 5))
 
         self.optionsFrame.pack(anchor = "nw", padx = 7)
 
         self.globalFrame1.pack(side = "left", expand = False, fill = "y", anchor = "w")
 
         # Data input / predict out
-        self.globalFrame2 = ttk.Frame(self)
+        self.globalFrame2 = ttk.Frame(self, relief = "solid", borderwidth = 4)
 
         self.globalFrame2.pack(side = "left",
                                expand = False,
                                fill = "both",
-                               pady = (12, 0),
+                               pady = (12, 12),
                                padx = 0)
 
         # Matplotlib graphs
@@ -325,12 +331,86 @@ class FitPredict(tk.Toplevel):
                                          expand = True, padx = 0, pady = 0)
 
         self.globalFrame3.pack(side = "left", expand = True, fill = "both", pady = 12, padx = 12)
-        # self.globalFrame4 = ttk.Frame(self)
+        
+        # Logging
+        
+        self.globalFrame4 = ttk.Frame(self, borderwidth = 12)
+        
+        self.logVars = {
+            "classification_report": tk.StringVar(self),
+            "delta": tk.StringVar(self),
+            "thirdLine": tk.StringVar(self),
+            "otherInfo": tk.StringVar(self),
+            "metric": tk.StringVar(self),
+        }
+        
+        self.deltaMetricFrame = ttk.Frame(self.globalFrame4)
+        
+        self.trainLog = {
+            "classification_report": {"label": ttk.Label(self.globalFrame4, 
+                                                         textvariable = self.logVars["classification_report"], 
+                                                         font = "Courier 8")},
+            "delta": {"label": tk.Label(self.deltaMetricFrame, textvariable = self.logVars["delta"]), "kwargs": {
+                "pady": 6, "side": "left"
+            }
+                      },
+            "metric": {"label": ttk.Label(self.deltaMetricFrame, textvariable = self.logVars["metric"]),
+                       "kwargs": {"side": "left"}},
+            "thirdLine": {"label": ttk.Label(self.globalFrame4, textvariable = self.logVars["thirdLine"])},
+            "otherInfo": {"label": ttk.Label(self.globalFrame4, textvariable = self.logVars["otherInfo"])},
+        }
+        
+        for i in self.trainLog: self.trainLog[i]["label"].pack(fill = "y", **self.trainLog[i].get("kwargs", dict()))
+        
+        self.deltaMetricFrame.pack(anchor = "w", expand = True, fill = "y")
+        # label = ttk.Label(self.globalFrame4, text = "Lorem ipsum est dolore est")
+        # label.pack()
+        self.globalFrame4.pack(side = "left", fill = "y", expand = False)
         # self.statusText = ttk.Label(text = "status")
+        
+        self.metricsList = []
 
-
+        try:
+            self.currentMetric = {
+                "Classification": accuracy_score, # add ROC AUC
+                "Regression": r2_score,
+            }[self.model["Role"]]
+        except:
+            self.destroy()
+            raise KeyError("No metric found for current task")
+    
+    def update_log(self):
+        # print classification report in classification task
+        {None: lambda: None}.get(self.report, lambda: self.logVars["classification_report"].set(self.report))()
+        
+        self.logVars["metric"].set(f"{self.lastMetrics:.3f}")
+        
+        try:
+            self.logVars["delta"].set(f"{self.lastMetrics - self.metricsList[-2]:+6.3f}")
+        except IndexError:
+            self.logVars["delta"].set(f"{self.lastMetrics:+6.3f}")
+        
+        {
+            True: lambda: self.trainLog["delta"]["label"].config(fg = "green"),
+            False: lambda: self.trainLog["delta"]["label"].config(fg = "red"),
+        }[float(self.logVars["delta"].get()) > 0]()
+        
+        
     def trainEvent(self):
-        ...
+        kwargs = {i["label"]["text"]: i["parseCallable"](i["entry"].get()) for i in self.optionsObj}
+        self.model["TrainedModel"] = self.model["ModelClass"](**kwargs)
+        
+        X_train, X_test, y_train, y_test = train_test_split(self.data_X, self.data_y, train_size = float(self.trainSizeVar.get()))
+        
+        self.model["TrainedModel"].fit(X_train, y_train)
+        
+        self.lastMetrics = self.metric(y_test, self.model["TrainedModel"].predict(X_test))
+        
+        self.metricsList += [self.lastMetrics]
+        
+        self.update_log()
+        
+        
 
     def predictEvent(self):
         ...
@@ -434,15 +514,14 @@ class FitPredict(tk.Toplevel):
         # int, float (range)
         # selection, bool
 
-class FitPredictSVC(FitPredict):
-    def __init__(self):
-        super().__init__()
-
-
-
-
-
-
+    def metric(self, true, prediction):
+        self.report = {
+            "Classification": lambda: classification_report(true, prediction)
+        }.get(self.model["Role"], lambda: None)()
+        
+        return self.currentMetric(true, prediction)
+        
+        
 
 def dataSplit(df: pd.DataFrame, columnName: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     data_X = df.drop(columnName, axis = 1)

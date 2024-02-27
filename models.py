@@ -12,7 +12,9 @@ Models = {
     },
     "SVR": {
         "Role": "Regression",
-        "kwargs": "SVC"
+        "kwargs": "SVC",
+        "ModelClass": SVR,
+        "TrainedModel": None
     }
 }
 

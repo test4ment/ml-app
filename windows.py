@@ -363,7 +363,6 @@ class FitPredict(tk.Toplevel):
         for i in self.trainLog: self.trainLog[i]["label"].pack(fill = "y", **self.trainLog[i].get("kwargs", dict()))
         
         self.deltaMetricFrame.pack(anchor = "w", expand = True, fill = "y")
-        # label = ttk.Label(self.globalFrame4, text = "Lorem ipsum est dolore est")
         # label.pack()
         self.globalFrame4.pack(side = "left", fill = "y", expand = False)
         # self.statusText = ttk.Label(text = "status")

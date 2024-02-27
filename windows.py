@@ -11,6 +11,8 @@ from sklearn.datasets import make_blobs
 from itertools import cycle
 import matplotlib.cm
 from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+from idlelib.tooltip import Hovertip
 
 
 class AboutWindow(tk.Toplevel):
@@ -264,7 +266,27 @@ class FitPredict(tk.Toplevel):
         self.predictButton.pack(side = "left")
 
         self.fitpredictFrame.pack(anchor = "nw", padx = 12, pady = 2)
-
+        
+        self.dataSplitFrame = ttk.Frame(self.globalFrame1, borderwidth = 2)
+        
+        self.trainSizeFrame = ttk.Frame(self.dataSplitFrame)
+        self.trainSizeLabel = ttk.Label(self.trainSizeFrame, text = "Train size:")
+        self.trainSizeLabel.pack(side = "left")
+        self.trainSizeVar = tk.StringVar(self, "0.2")
+        self.testSizeVar = tk.StringVar(self, "Test size: 0.8")
+        self.trainSizeSpinbox = ttk.Spinbox(self.trainSizeFrame, from_ = 0.01, to = 0.99, 
+                                            increment = 0.01, textvariable = self.trainSizeVar,
+                                            command = lambda: self.testSizeVar.set(f"Test size: {1 - float(self.trainSizeSpinbox.get()):.2f}"),
+                                            width = 4)
+        self.trainSizeSpinbox.pack(side = "left")
+        self.trainSizeFrame.pack(anchor = "nw", padx = 0, fill = "x", expand = True)
+        self.testSizeLabel = ttk.Label(self.dataSplitFrame, textvariable = self.testSizeVar)
+        self.testSizeLabel.pack(anchor = "nw", padx = 0, fill = "x", expand = True, pady = 2)
+        # train_test_split
+        self.dataSplitFrame.pack(anchor = "nw", padx = 14)
+        
+        
+        
         self.globalFrame1.pack(side = "left", expand = False, fill = "y", anchor = "w")
 
         # Data input / predict out

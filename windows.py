@@ -255,7 +255,9 @@ class FitPredict(tk.Toplevel):
 
         self.dataLoadFrame = ttk.Frame(self.globalFrame1, borderwidth = 2)
         self.loadCsv = ttk.Button(self.dataLoadFrame, text = "Load .csv", command = lambda: load_data_csv(self))
-        self.loadCsv.pack()
+        self.loadCsv.pack(side = "left", padx = (0, 4))
+        self.dataPrepare = ttk.Button(self.dataLoadFrame, text = "Preprocess data", command = lambda: self.dataPreprocess, state = "disabled")
+        self.dataPrepare.pack(side = "left", padx = (0, 4))
         self.dataLoadFrame.pack(anchor = "nw", padx = 12, pady = (12, 2))
 
         self.loadStatusText = tk.StringVar(self, "Awaiting data...")
@@ -266,8 +268,8 @@ class FitPredict(tk.Toplevel):
 
         self.fitButton = ttk.Button(self.fitpredictFrame, text = "Train", state = "disabled", command = self.trainEvent)
         self.predictButton = ttk.Button(self.fitpredictFrame, text = "Predict", state = "disabled", command = self.predictEvent)
-        self.fitButton.pack(side = "left")
-        self.predictButton.pack(side = "left")
+        self.fitButton.pack(side = "left", padx = (0, 4))
+        self.predictButton.pack(side = "left", padx = (0, 4))
 
         self.fitpredictFrame.pack(anchor = "nw", padx = 12, pady = 2)
 
@@ -318,6 +320,9 @@ class FitPredict(tk.Toplevel):
                                fill = "both",
                                pady = (12, 12),
                                padx = 0)
+        
+        self.predictStr = tk.StringVar(self)
+        self.predictLabel = ttk.Label(self.globalFrame2, textvariable = self.predictStr)
 
         # Matplotlib graphs
         self.globalFrame3 = ttk.Frame(self)
@@ -420,7 +425,6 @@ class FitPredict(tk.Toplevel):
         self.loadStatusText.set(f"Loaded {self.csvdf.name}")
 
         try:
-            # map(lambda i: map(lambda j: j.destroy(), i), self.inputFrames.items())
             for i in self.inputFrames:
                 for j in self.inputFrames[i]:
                     j.destroy()
@@ -431,19 +435,14 @@ class FitPredict(tk.Toplevel):
             pass
 
         self.inputFrames = {}
-        for column, type_ in zip(self.data_X.columns, self.data_X.dtypes):
+        for column in self.data_X.columns:
             frame = ttk.Frame(self.globalFrame2)
-            # lb = ttk.Label(frame, text = f"{column} ({self.data_X[column].min()} - {self.data_X[column].max()})", width = 25)
-            # lb.pack(side = "left")
-            # ent = ttk.Entry(frame, width = 8)
-            # ent.pack(side = "left")
-            # ent.insert(0, f"{self.data_X[column].mean():.2f}")
-
+            
             self.inputFrames[frame] = self.inpLabelObject(frame, self.data_X[column], column)
             frame.pack(anchor = "w")
 
-            ## Only works with float data
-            ## Make encoding method
+        self.predictLabel.pack(anchor = "w", padx = 12, pady = 12)
+        self.predictStr.set(self.data_y.columns[0] + " ?")
 
 
         self.update()

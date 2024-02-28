@@ -256,8 +256,10 @@ class FitPredict(tk.Toplevel):
         self.dataLoadFrame = ttk.Frame(self.globalFrame1, borderwidth = 2)
         self.loadCsv = ttk.Button(self.dataLoadFrame, text = "Load .csv", command = lambda: load_data_csv(self))
         self.loadCsv.pack(side = "left", padx = (0, 4))
+        
         self.dataPrepare = ttk.Button(self.dataLoadFrame, text = "Preprocess data", command = lambda: self.dataPreprocess, state = "disabled")
         self.dataPrepare.pack(side = "left", padx = (0, 4))
+        
         self.dataLoadFrame.pack(anchor = "nw", padx = 12, pady = (12, 2))
 
         self.loadStatusText = tk.StringVar(self, "Awaiting data...")
@@ -382,6 +384,9 @@ class FitPredict(tk.Toplevel):
         except:
             self.destroy()
             raise KeyError("No metric found for current task")
+    
+    def dataPreprocess(self, X, y = None):
+        ...
     
     def update_log(self):
         # print classification report in classification task
@@ -519,6 +524,11 @@ class FitPredict(tk.Toplevel):
         
         return self.currentMetric(true, prediction)
         
+        
+
+class DataPreprocWindow(tk.Tk):
+    def __init__(self, X, y = None):
+        super().__init__()
         
 
 def dataSplit(df: pd.DataFrame, columnName: str) -> tuple[pd.DataFrame, pd.DataFrame]:

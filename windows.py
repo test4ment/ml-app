@@ -54,7 +54,7 @@ class CsvPathWindow(tk.Toplevel):
         
         def confirm(* args):
             path = self.textEntry.get()
-            self.parent.csvdf = read_csv(path)
+            self.parent.csvdf = read_csv(path, sep = ";")
             self.parent.csvdf.name = path.split("\\")[-1]
             SelectColWindow(self.parent, self.parent.csvdf)
             self.destroy()
@@ -257,7 +257,9 @@ class FitPredict(tk.Toplevel):
         self.loadCsv = ttk.Button(self.dataLoadFrame, text = "Load .csv", command = lambda: load_data_csv(self))
         self.loadCsv.pack(side = "left", padx = (0, 4))
         
-        self.dataPrepare = ttk.Button(self.dataLoadFrame, text = "Preprocess data", command = lambda: self.dataPreprocess, state = "disabled")
+        self.dataPrepare = ttk.Button(self.dataLoadFrame, text = "Preprocess data", command = lambda: self.dataPreprocess(self.data_X, self.data_y), 
+                                    #   state = "disabled"
+                                      )
         self.dataPrepare.pack(side = "left", padx = (0, 4))
         
         self.dataLoadFrame.pack(anchor = "nw", padx = 12, pady = (12, 2))
@@ -361,13 +363,16 @@ class FitPredict(tk.Toplevel):
                 "pady": 6, "side": "left"
             }
                       },
-            "metric": {"label": ttk.Label(self.deltaMetricFrame, textvariable = self.logVars["metric"]),
-                       "kwargs": {"side": "left"}},
+            "metric": {"label": ttk.Label(self.deltaMetricFrame, textvariable = self.logVars["metric"]), "kwargs": {
+                "side": "left"
+            }
+                       },
             "thirdLine": {"label": ttk.Label(self.globalFrame4, textvariable = self.logVars["thirdLine"])},
             "otherInfo": {"label": ttk.Label(self.globalFrame4, textvariable = self.logVars["otherInfo"])},
         }
         
-        for i in self.trainLog: self.trainLog[i]["label"].pack(fill = "y", **self.trainLog[i].get("kwargs", dict()))
+        for i in self.trainLog: 
+            self.trainLog[i]["label"].pack(fill = "y", **self.trainLog[i].get("kwargs", dict()))
         
         self.deltaMetricFrame.pack(anchor = "w", expand = True, fill = "y")
         # label.pack()
@@ -386,7 +391,7 @@ class FitPredict(tk.Toplevel):
             raise KeyError("No metric found for current task")
     
     def dataPreprocess(self, X, y = None):
-        ...
+        DataPreprocWindow(self, X, y)
     
     def update_log(self):
         # print classification report in classification task
@@ -527,8 +532,69 @@ class FitPredict(tk.Toplevel):
         
 
 class DataPreprocWindow(tk.Tk):
-    def __init__(self, X, y = None):
+    def __init__(self, parent, X, y = None):
         super().__init__()
+        
+        self.parent = parent
+        self.X = X
+        self.y = y
+
+        self.buttonsFrame = ttk.Frame(self, borderwidth = 2)
+        
+        self.actionButton = ttk.Button(self.buttonsFrame, text = "Apply changes", command = lambda: None) #
+        self.actionButton.pack()
+        
+        self.buttonsFrame.pack()
+        
+        self.colFrame = ttk.Frame(self, borderwidth = 2)
+        
+        self.actFrames = []
+        
+        for column in self.X.columns:
+            actions = {
+                "object": ["", "drop", "onehot", "ordinal"]
+                }.get(self.X[[column]].dtypes[0], ["", "drop"])
+            
+            self.actFrames += [
+                {
+                    "frame": ttk.Frame(self.colFrame, borderwidth = 2)
+                }
+            ]
+            
+            # print(self.X[[column]])
+            labelText = {
+                "object": f"uniques: {len(np.unique(self.X[[column]].dropna()))}"
+                }.get(self.X[[column]].dtypes[0], str(self.X[[column]].dtypes[0]))
+            
+            self.actFrames[-1]["namel"] = ttk.Label(
+                self.actFrames[-1]["frame"],
+                text = column + "\n" + labelText,
+                width = 12
+            )
+            
+            self.actFrames[-1]["box"] = ttk.Combobox(
+                self.actFrames[-1]["frame"],
+                values = actions,
+                width = 12
+            )
+            
+            self.actFrames[-1]["frame"].pack(side = "left")
+            self.actFrames[-1]["namel"].pack(pady = (0, 4))
+            self.actFrames[-1]["box"].pack(pady = (0, 4))
+            # self.actFrames[-1]["frame"]
+            # dataHandler()
+            ...
+        
+        self.colFrame.pack(expand = True, fill = "both")
+        
+    def dataHandler(self, column):
+        {
+            "object": [lambda: self.X]
+        }[column.dtype]
+    
+    def encode(self, column, encType):
+        ...
+    
         
 
 def dataSplit(df: pd.DataFrame, columnName: str) -> tuple[pd.DataFrame, pd.DataFrame]:

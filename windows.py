@@ -467,7 +467,7 @@ class FitPredict(tk.Toplevel):
         label.pack(side = "left")
 
         entrytype = {
-            "object": lambda: ttk.Combobox(frame, values = list(np.unique(series)), state = "readonly", width = width // 3)
+            "object": lambda: ttk.Combobox(frame, values = list(np.unique(series.dropna())), state = "readonly", width = width // 3)
         }.get(type_, lambda: ttk.Entry(frame, width =  width // 3))()
 
         try:
@@ -541,7 +541,7 @@ class DataPreprocWindow(tk.Tk):
 
         self.buttonsFrame = ttk.Frame(self, borderwidth = 2)
         
-        self.actionButton = ttk.Button(self.buttonsFrame, text = "Apply changes", command = lambda: None) #
+        self.actionButton = ttk.Button(self.buttonsFrame, text = "Apply changes", command = self.processData)
         self.actionButton.pack()
         
         self.buttonsFrame.pack()
@@ -550,21 +550,24 @@ class DataPreprocWindow(tk.Tk):
         
         self.actFrames = []
         
-        for column in self.X.columns:
+        for num, column in enumerate(self.X.columns):
+            type_ = str(self.X[[column]].dtypes[0])
+            
             actions = {
                 "object": ["", "drop", "onehot", "ordinal"]
-                }.get(self.X[[column]].dtypes[0], ["", "drop"])
+                }.get(type_, ["", "drop"])
             
             self.actFrames += [
                 {
-                    "frame": ttk.Frame(self.colFrame, borderwidth = 2)
+                    "frame": ttk.Frame(self.colFrame, borderwidth = 2, relief = "solid"),
+                    "columnName": column,
                 }
             ]
             
             # print(self.X[[column]])
             labelText = {
                 "object": f"uniques: {len(np.unique(self.X[[column]].dropna()))}"
-                }.get(self.X[[column]].dtypes[0], str(self.X[[column]].dtypes[0]))
+                }.get(type_, type_)
             
             self.actFrames[-1]["namel"] = ttk.Label(
                 self.actFrames[-1]["frame"],
@@ -578,14 +581,43 @@ class DataPreprocWindow(tk.Tk):
                 width = 12
             )
             
-            self.actFrames[-1]["frame"].pack(side = "left")
+            self.actFrames[-1]["actNaLbl"] = {
+                0: None
+            }.get(int(self.X[[column]].isna().sum()),
+                  ttk.Label(self.actFrames[-1]["frame"], text = "Replace NaNs")
+                  )
+            # /home/probel/mlapp/ml-app/mushrooms/primary_data.csv
+            values = {
+                "object": ["Mode"],
+            }.get(type_, ["Mean"])
+            
+            self.actFrames[-1]["actNa"] = {
+                0: None
+            }.get(int(self.X[[column]].isna().sum()),
+                  ttk.Combobox(self.actFrames[-1]["frame"], values = values, width = 12)
+            )
+            
+            self.actFrames[-1]["frame"].grid(row = num // 5, column = num % 5)
             self.actFrames[-1]["namel"].pack(pady = (0, 4))
             self.actFrames[-1]["box"].pack(pady = (0, 4))
+            try:
+                self.actFrames[-1]["actNaLbl"].pack(pady = (0, 4))
+                self.actFrames[-1]["actNa"].pack(pady = (0, 4))
+                self.actFrames[-1]["actNa"].current(0)
+            except:
+                pass
             # self.actFrames[-1]["frame"]
             # dataHandler()
-            ...
         
         self.colFrame.pack(expand = True, fill = "both")
+        
+    def processData(self):
+        dicts = []
+        for item in self.actFrames:
+            dicts += [dict()]
+            # for key in item:
+            dicts[-1] |= item
+        print(dicts)
         
     def dataHandler(self, column):
         {

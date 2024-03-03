@@ -14,6 +14,7 @@ from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from idlelib.tooltip import Hovertip
 from sklearn.metrics import r2_score, accuracy_score, classification_report
+from os.path import basename
 
 
 class AboutWindow(tk.Toplevel):
@@ -29,7 +30,7 @@ class SelectColWindow(tk.Toplevel):
         self.df = df
 
         def selectCol():
-            self.parent.data_X, self.parent.data_y = dataSplit(self.df, self.entry.get())
+            self.parent.data_X, self.parent.data_y = dataLabelSplit(self.df, self.entry.get())
             self.parent.postLoad()
             self.destroy()
 
@@ -55,7 +56,7 @@ class CsvPathWindow(tk.Toplevel):
         def confirm(* args):
             path = self.textEntry.get()
             self.parent.csvdf = read_csv(path, sep = ";")
-            self.parent.csvdf.name = path.split("\\")[-1]
+            self.parent.csvdf_name = basename(path)
             SelectColWindow(self.parent, self.parent.csvdf)
             self.destroy()
 
@@ -176,8 +177,8 @@ class DemoWindow(tk.Toplevel):
         self.meshgrids = np.meshgrid(np.linspace(*self.ax.get_xbound(), 100),
                                      np.linspace(*self.ax.get_ybound(), 100))
         try:
-            self.loadedText.set(self.csvdf.name)
-            del self.csvdf.name
+            self.loadedText.set(self.csvdf_name)
+            del self.csvdf_name
         except:
             self.loadedText.set("Load data")
 
@@ -432,7 +433,7 @@ class FitPredict(tk.Toplevel):
     def postLoad(self):
         # print(self.data_X, self.data_y)
         self.fitButton["state"], self.predictButton["state"] = "normal", "normal"
-        self.loadStatusText.set(f"Loaded {self.csvdf.name}")
+        self.loadStatusText.set(f"Loaded {self.csvdf_name}")
 
         try:
             for i in self.inputFrames:
@@ -564,7 +565,6 @@ class DataPreprocWindow(tk.Tk):
                 }
             ]
             
-            # print(self.X[[column]])
             labelText = {
                 "object": f"uniques: {len(np.unique(self.X[[column]].dropna()))}"
                 }.get(type_, type_)
@@ -578,7 +578,8 @@ class DataPreprocWindow(tk.Tk):
             self.actFrames[-1]["box"] = ttk.Combobox(
                 self.actFrames[-1]["frame"],
                 values = actions,
-                width = 12
+                width = 12,
+                state = "readonly"
             )
             
             self.actFrames[-1]["actNaLbl"] = {
@@ -594,7 +595,8 @@ class DataPreprocWindow(tk.Tk):
             self.actFrames[-1]["actNa"] = {
                 0: None
             }.get(int(self.X[[column]].isna().sum()),
-                  ttk.Combobox(self.actFrames[-1]["frame"], values = values, width = 12)
+                  ttk.Combobox(self.actFrames[-1]["frame"], values = values, 
+                               width = 12, state = "readonly")
             )
             
             self.actFrames[-1]["frame"].grid(row = num // 5, column = num % 5)
@@ -613,23 +615,47 @@ class DataPreprocWindow(tk.Tk):
         
     def processData(self):
         dicts = []
+        
         for item in self.actFrames:
             dicts += [dict()]
-            # for key in item:
-            dicts[-1] |= item
-        print(dicts)
+            for key in item:
+                # dicts[-1] |= item
+                try:
+                    {
+                        "columnName": lambda: dicts[-1].update(column = item[key]),
+                        "box": lambda: dicts[-1].update(encoding = item[key].get()),
+                        "actNa": lambda: dicts[-1].update(nan = item[key].get()),
+                    }.get(key, lambda: None)()
+                except:
+                    pass
+                
+        for item in dicts:
+            self.preDataHandler(item["column"], item)
         
-    def dataHandler(self, column):
+    def preDataHandler(self, column: str, options = dict()):
         {
-            "object": [lambda: self.X]
-        }[column.dtype]
+            "drop": lambda: self.X.drop(column, axis = 1)
+        }.get(options.get("encoding"), lambda: None)()
+        
+        try:
+            {
+                "Mode": lambda: self.X[column].fillna(self.X[column].mode(), inplace = True),
+                "Mean": lambda: self.X[column].fillna(self.X[column].mean(), inplace = True),
+            }.get(options.get("nan"), lambda: None)()
+        except:
+            pass
+        
+        self.parent.data_X = self.X
+        self.parent.postLoad()
+        
+        # self.parent.encode = lambda X: self.enco
     
     def encode(self, column, encType):
         ...
     
         
 
-def dataSplit(df: pd.DataFrame, columnName: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+def dataLabelSplit(df: pd.DataFrame, columnName: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     data_X = df.drop(columnName, axis = 1)
     data_y = df[[columnName]]
     return data_X, data_y

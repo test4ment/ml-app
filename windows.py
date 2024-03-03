@@ -15,6 +15,7 @@ from sklearn.model_selection import train_test_split
 from idlelib.tooltip import Hovertip
 from sklearn.metrics import r2_score, accuracy_score, classification_report
 from os.path import basename
+from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder
 
 
 class AboutWindow(tk.Toplevel):
@@ -28,6 +29,8 @@ class SelectColWindow(tk.Toplevel):
 
         self.parent = parent
         self.df = df
+
+        self.title("ML app")
 
         def selectCol():
             self.parent.data_X, self.parent.data_y = dataLabelSplit(self.df, self.entry.get())
@@ -82,6 +85,8 @@ class CsvPathWindow(tk.Toplevel):
 class DemoWindow(tk.Toplevel):
     def __init__(self):
         super().__init__()
+
+        self.title("ML app")
 
         self.frame = ttk.Frame(self)
 
@@ -333,8 +338,8 @@ class FitPredict(tk.Toplevel):
         self.globalFrame3 = ttk.Frame(self)
 
         self.fig = Figure(figsize = (5, 4), dpi = 100)
-        self.fig.subplots_adjust(left = 0.01, right = 0.99, top = 0.99, bottom = 0.02)
-        # self.ax = self.fig.add_subplot()
+        self.fig.subplots_adjust(left = 0.1, right = 0.99, top = 0.99, bottom = 0.02)
+        self.ax = self.fig.add_subplot()
         self.canvas = FigureCanvasTkAgg(self.fig, master = self.globalFrame3)
         self.canvas.get_tk_widget().pack(side = "left",
                                          fill = "both",
@@ -423,13 +428,43 @@ class FitPredict(tk.Toplevel):
         
         self.metricsList += [self.lastMetrics]
         
+        try:
+            self.metricsList[1]
+        except IndexError:
+            self.metricsList += [self.metricsList[0]]
+        
+        # def plotResultswc():
+        #     from itertools import pairwise
+            
+        #     for num, (metric0, metric1) in enumerate(pairwise(self.metricsList)):
+        #         self.ax.plot(num, metric1, color = {True: "g", False: "r"}[metric1 >= metric0])
+        
+        redraw_canvas(self.canvas, self.ax, [
+            lambda: self.ax.plot(self.metricsList)
+            # plotResultswc
+        ])
+        
         self.update_log()
         
         
 
     def predictEvent(self):
-        ...
-
+        from numpy import ravel
+        values = []
+        for frame in self.inputFrames:
+            data = self.inputFrames[frame][1].get()
+            values += [(int(data) if isinstance(data, int) else float(data)) if is_float(data) else str(data)]
+        predictdf = pd.DataFrame([values], columns = self.lastSavedInpcols)
+        
+        for column in predictdf.columns:
+            try:
+                # print(predictdf[[column]].columns)
+                predictdf = ColumnEncode[column](predictdf, predictdf[[column]])
+            except KeyError as e:
+                print(e)
+        
+        self.predictStr.set(f"{" ".join(self.predictStr.get().split()[:-1])} {self.model["TrainedModel"].predict(predictdf)[0]}")
+            
     def postLoad(self):
         # print(self.data_X, self.data_y)
         self.fitButton["state"], self.predictButton["state"] = "normal", "normal"
@@ -446,6 +481,7 @@ class FitPredict(tk.Toplevel):
             pass
 
         self.inputFrames = {}
+        self.lastSavedInpcols = list(self.data_X.columns)
         for column in self.data_X.columns:
             frame = ttk.Frame(self.globalFrame2)
             
@@ -536,6 +572,8 @@ class DataPreprocWindow(tk.Tk):
     def __init__(self, parent, X, y = None):
         super().__init__()
         
+        self.title("Data processing")
+        
         self.parent = parent
         self.X = X
         self.y = y
@@ -583,18 +621,18 @@ class DataPreprocWindow(tk.Tk):
             )
             
             self.actFrames[-1]["actNaLbl"] = {
-                0: None
-            }.get(int(self.X[[column]].isna().sum()),
+                False: None
+            }.get(self.X.isnull().any().any(),
                   ttk.Label(self.actFrames[-1]["frame"], text = "Replace NaNs")
                   )
-            # /home/probel/mlapp/ml-app/mushrooms/primary_data.csv
+
             values = {
                 "object": ["Mode"],
             }.get(type_, ["Mean"])
             
             self.actFrames[-1]["actNa"] = {
-                0: None
-            }.get(int(self.X[[column]].isna().sum()),
+                False: None
+            }.get(self.X.isnull().any().any(),
                   ttk.Combobox(self.actFrames[-1]["frame"], values = values, 
                                width = 12, state = "readonly")
             )
@@ -613,6 +651,9 @@ class DataPreprocWindow(tk.Tk):
         
         self.colFrame.pack(expand = True, fill = "both")
         
+        self.update()
+        self.minsize(self.winfo_width() + 10, self.winfo_height())
+        
     def processData(self):
         dicts = []
         
@@ -629,34 +670,83 @@ class DataPreprocWindow(tk.Tk):
                 except:
                     pass
         
-        self.parent.encode = //
+        # self.parent.encode = lambda: map()
         
         for item in dicts:
-            self.preDataHandler(item["column"], item)
-            self.parent
-            
+            self.X = preDataHandler(self.X, item["column"], item)
         
-    def preDataHandler(self, column: str, options = dict()):
-        {
-            "drop": lambda: self.X.drop(column, axis = 1)
-        }.get(options.get("encoding"), lambda: None)()
-        
-        try:
-            {
-                "Mode": lambda: self.X[column].fillna(self.X[column].mode(), inplace = True),
-                "Mean": lambda: self.X[column].fillna(self.X[column].mean(), inplace = True),
-            }.get(options.get("nan"), lambda: None)()
-        except:
-            pass
+        for item in dicts:
+            if item["encoding"] not in ["", "drop"]:
+                self.X = encode(self.X, item["column"], item["encoding"])
         
         self.parent.data_X = self.X
-        self.parent.postLoad()
+        # self.parent.postLoad()
+        self.destroy()
+            
+        
+def preDataHandler(df, column: str, options = dict()) -> pd.DataFrame:
+    try:
+        df = {
+                "drop": lambda: df.drop(column, axis = 1, inplace = False)
+            }[options.get("encoding")]()
+        return df
+    except:
+        pass
+    try:
+        df = {
+            "Mode": lambda: df[column].fillna(df[column].mode(), inplace = False),
+            "Mean": lambda: df[column].fillna(df[column].mean(), inplace = False),
+        }.get[options.get("nan")]()
+        return df
+    except:
+        return df
         
     
-    def encode(self, column, encType):
-        ...
-    
+    # self.parent.data_X = self.X
+    # self.parent.postLoad()
         
+    
+def encode(df: pd.DataFrame, column: str, encType) -> pd.DataFrame:
+    df_column = df[[column]]
+    
+    try:
+        df_column = ColumnEncode.get(column)(df, df_column)
+        df[column] = df_column
+        return df
+    except Exception as e:
+        pass
+    
+    try:
+        encoder = {
+            "ordinal": OrdinalEncoder(dtype = int)
+        }[encType]
+        
+        df_column = encoder.fit_transform(df_column)
+        df[column] = df_column
+        ColumnEncode[column] = lambda df, df_column: pd.concat([df.drop(df_column.columns[0], axis = 1), pd.DataFrame(encoder.transform(df_column), columns = encoder.get_feature_names_out())], axis = 1)
+        return df
+    except Exception as e:
+        print(e)
+        pass
+    
+    try:
+        encoder = {
+            "onehot": OneHotEncoder(dtype = int, sparse_output = False,
+                                    handle_unknown = "ignore")
+        }[encType]
+        
+        df_column = encoder.fit_transform(df_column)
+        df.drop(column, axis = 1, inplace = True)
+        df = pd.concat([df, pd.DataFrame(df_column, columns = encoder.get_feature_names_out())], axis = 1)
+        
+        ColumnEncode[column] = lambda df, df_column: pd.concat([df.drop(df_column.columns[0], axis = 1), pd.DataFrame(encoder.transform(df_column), columns = encoder.get_feature_names_out())], axis = 1)
+        
+        return df
+    except Exception as e:
+        pass
+    
+    raise ValueError("No encoder found")
+
 
 def dataLabelSplit(df: pd.DataFrame, columnName: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     data_X = df.drop(columnName, axis = 1)
@@ -684,3 +774,6 @@ def redraw_canvas(canvas, ax, mplcallables: list[callable], *args) -> None:
 
 def load_data_csv(parent) -> None:
     CsvPathWindow(parent)
+
+global ColumnEncode
+ColumnEncode = dict()

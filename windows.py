@@ -628,9 +628,13 @@ class DataPreprocWindow(tk.Tk):
                     }.get(key, lambda: None)()
                 except:
                     pass
-                
+        
+        self.parent.encode = //
+        
         for item in dicts:
             self.preDataHandler(item["column"], item)
+            self.parent
+            
         
     def preDataHandler(self, column: str, options = dict()):
         {
@@ -648,7 +652,6 @@ class DataPreprocWindow(tk.Tk):
         self.parent.data_X = self.X
         self.parent.postLoad()
         
-        # self.parent.encode = lambda X: self.enco
     
     def encode(self, column, encType):
         ...

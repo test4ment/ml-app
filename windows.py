@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 import numpy as np
 from sklearn.linear_model import SGDClassifier
 from sklearn.datasets import make_blobs
-from itertools import cycle
+from itertools import cycle, pairwise
 import matplotlib.cm
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
@@ -439,8 +439,26 @@ class FitPredict(tk.Toplevel):
         #     for num, (metric0, metric1) in enumerate(pairwise(self.metricsList)):
         #         self.ax.plot(num, metric1, color = {True: "g", False: "r"}[metric1 >= metric0])
         
+        def drawax_ax():
+            for num, (metric0, metric1) in enumerate(pairwise(self.metricsList)):
+                self.ax.plot((num, num + 1), 
+                             (metric0, metric1),
+                             c = {
+                                 True: "tab:green",
+                                 False: "tab:red"
+                                 }[metric1 >= metric0]
+                             )
+            # self.linelist = self.ax.plot(self.metricsList)
+        
+        # def recolor_ax():
+        #     print(self.linelist)
+        #     for item in self.linelist:
+        #         print(item.get_data())
+        
         redraw_canvas(self.canvas, self.ax, [
-            lambda: self.ax.plot(self.metricsList)
+            # lambda: self.ax.plot(self.metricsList),
+            drawax_ax,
+            # recolor_ax
             # plotResultswc
         ])
         

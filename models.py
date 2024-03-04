@@ -12,7 +12,7 @@ Models = {
     },
     "SVR": {
         "Role": "Regression",
-        "kwargs": "SVC",
+        "kwargs": "SVR",
         "ModelClass": SVR,
         "TrainedModel": None
     }
@@ -28,6 +28,17 @@ KWargs = {
     "SVC": { # hint
         'decision_function_shape': {"type": "list", "items": ["ovr", "ovo"], "parseCallable": str},
         'break_ties': {"type": "list", "items": [False, True], "parseCallable": lambda arg: to_bool(arg)},
+        'kernel': {"type": "list", "items": ["rbf", "linear", "poly", "sigmoid"], "parseCallable": str},
+        'degree': {"type": "int", "range": (0, np.inf, 1), "default": 3, "kwargs": {"state": "normal"}, "parseCallable": int},
+        'gamma': {"type": "list", "items": ["scale", "auto"], "kwargs": {"state": "normal"}, "parseCallable": lambda i: float(i) if is_float(i) else str(i)},
+        'coef0': {"type": "float", "range": (-np.inf, np.inf, 0.1), "default": 0.0, "kwargs": {"state": "normal"}, "parseCallable": float},
+        'tol': {"type": "float", "range": (0, 1, 1e-5), "default": 1e-3, "kwargs": {"state": "normal"}, "parseCallable": float},
+        'C': {"type": "float", "range": (0, np.inf, 0.1), "default": 1.0, "kwargs": {"state": "normal"}, "parseCallable": float},
+        'shrinking': {"type": "list", "items": [True, False], "parseCallable": lambda arg: to_bool(arg)},
+        'cache_size': {"type": "int", "range": (0, np.inf, 25), "default": 200, "parseCallable": int},
+        'max_iter': {"type": "int", "range": (-1, np.inf, 100), "default": -1, "kwargs": {"state": "normal"}, "parseCallable": int},
+    },
+    "SVR": { # hint
         'kernel': {"type": "list", "items": ["rbf", "linear", "poly", "sigmoid"], "parseCallable": str},
         'degree': {"type": "int", "range": (0, np.inf, 1), "default": 3, "kwargs": {"state": "normal"}, "parseCallable": int},
         'gamma': {"type": "list", "items": ["scale", "auto"], "kwargs": {"state": "normal"}, "parseCallable": lambda i: float(i) if is_float(i) else str(i)},

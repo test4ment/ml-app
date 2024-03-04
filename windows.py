@@ -439,15 +439,8 @@ class FitPredict(tk.Toplevel):
         #     for num, (metric0, metric1) in enumerate(pairwise(self.metricsList)):
         #         self.ax.plot(num, metric1, color = {True: "g", False: "r"}[metric1 >= metric0])
         
-        def drawax_ax():
-            for num, (metric0, metric1) in enumerate(pairwise(self.metricsList)):
-                self.ax.plot((num, num + 1), 
-                             (metric0, metric1),
-                             c = {
-                                 True: "tab:green",
-                                 False: "tab:red"
-                                 }[metric1 >= metric0]
-                             )
+        # def drawax_ax():
+            
             # self.linelist = self.ax.plot(self.metricsList)
         
         # def recolor_ax():
@@ -457,7 +450,15 @@ class FitPredict(tk.Toplevel):
         
         redraw_canvas(self.canvas, self.ax, [
             # lambda: self.ax.plot(self.metricsList),
-            drawax_ax,
+            # drawax_ax,
+            lambda: [self.ax.plot((num, num + 1), 
+                             (metric0, metric1),
+                             c = {
+                                 True: "tab:green",
+                                 False: "tab:red"
+                                 }[metric1 >= metric0]
+                             ) for num, (metric0, metric1) in enumerate(pairwise(self.metricsList))]
+                
             # recolor_ax
             # plotResultswc
         ])

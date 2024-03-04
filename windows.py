@@ -451,13 +451,13 @@ class FitPredict(tk.Toplevel):
         redraw_canvas(self.canvas, self.ax, [
             # lambda: self.ax.plot(self.metricsList),
             # drawax_ax,
-            lambda: [self.ax.plot((num, num + 1), 
-                             (metric0, metric1),
+            lambda: [self.ax.plot((num, num + 1), (metric0, metric1),
                              c = {
                                  True: "tab:green",
                                  False: "tab:red"
                                  }[metric1 >= metric0]
-                             ) for num, (metric0, metric1) in enumerate(pairwise(self.metricsList))]
+                             ) for num, (metric0, metric1) \
+                            in enumerate(pairwise(self.metricsList))]
                 
             # recolor_ax
             # plotResultswc
